@@ -26,10 +26,16 @@ Before usage you need to obtain pre-trained models:
 ussegmentation get models
 ```
 
-To run a default model run:
+To run empty inference on a video with preview:
 
 ```sh
-ussegmentation inference
+ussegmentation inference empty --input-file 'datasets\copter\DJI_0007(1).mp4' --output-file 'datasets\copter\empty_inference.mp4'
+```
+
+To run empty inference on an image without preview:
+
+```sh
+ussegmentation inference empty --input-type image --input-file 'datasets\2019\frame_200.png' --output-file 'datasets\1.png' --no-show
 ```
 
 To obtain needed datasets execute:
