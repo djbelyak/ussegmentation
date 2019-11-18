@@ -1,5 +1,9 @@
 """Download all needed things."""
 import logging
+import requests
+import zipfile
+
+from pathlib import Path
 
 
 class Downloader:
@@ -8,6 +12,10 @@ class Downloader:
     def __init__(self, arg):
         self.log = logging.getLogger(__name__)
         self.arg = arg
+        self.datasets = {
+            "copter": "https://165616.selcdn.ru/datasets/copter.zip",
+            "cityscapes": "https://165616.selcdn.ru/datasets/cityscapes.zip",
+        }
 
     def download(self):
         """Main download function."""
@@ -19,6 +27,35 @@ class Downloader:
     def download_datasets(self):
         """Download all datasets."""
         self.log.info("Downloading datasets")
+        # create datasets dir if not exists
+        main_dir = Path("datasets")
+        if not main_dir.exists():
+            main_dir.mkdir()
+
+        # for each dataset
+        for dataset, url in self.datasets.items():
+            dataset_dir = main_dir.joinpath(dataset)
+            if dataset_dir.exists():
+                continue
+
+            self.log.info("Downloading '%s' dataset", dataset)
+            dataset_dir.mkdir()
+
+            dataset_archive = dataset_dir.joinpath(url.split("/")[-1])
+
+            with requests.get(url, stream=True) as r:
+                r.raise_for_status()
+                with open(dataset_archive, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk:
+                            f.write(chunk)
+
+            with zipfile.ZipFile(dataset_archive, "r") as zip_ref:
+                zip_ref.extractall(dataset_dir)
+
+            dataset_archive.unlink()
+
+        self.log.info("Done!")
 
     def download_models(self):
         """Download all models."""
