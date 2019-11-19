@@ -7,7 +7,10 @@ import ussegmentation
 import ussegmentation.logger as logger
 
 from ussegmentation.download import Downloader
-from ussegmentation.inference import InferenceCreator
+from ussegmentation.inference import Inference
+from ussegmentation.trainer import Trainer
+from ussegmentation.datasets import get_dataset_list
+from ussegmentation.models import get_model_list, get_model_by_name
 
 
 log = logging.getLogger(__name__)
@@ -35,22 +38,51 @@ def get(arg):
 
 
 @cli.command()
-def train():
+@click.argument(
+    "model",
+    type=click.Choice(
+        list([model.name for model in get_model_list()]), case_sensitive=False
+    ),
+    default="empty",
+)
+@click.option(
+    "--dataset",
+    type=click.Choice(
+        [dataset.name for dataset in get_dataset_list()], case_sensitive=False
+    ),
+)
+@click.option(
+    "--model-file",
+    type=click.Path(),
+    help="Path to result model file",
+    default="",
+)
+def train(model, dataset, model_file):
     """Train a neuron network on specified dataset."""
-    log.error("Train command is not implemented yet")
+    try:
+        trainer = Trainer(model, dataset, model_file)
+        trainer.train()
+    except Exception as e:
+        logging.error(e, exc_info=True)
 
 
 @cli.command()
 @click.argument(
     "model",
     type=click.Choice(
-        list(InferenceCreator.inferences.keys()), case_sensitive=False
+        list(model.name for model in get_model_list()), case_sensitive=False
     ),
     default="empty",
 )
 @click.option(
+    "--model-file",
+    type=click.Path(),
+    help="Path to pre-trained model file",
+    default="",
+)
+@click.option(
     "--input-type",
-    type=click.Choice(InferenceCreator.input_types, case_sensitive=False),
+    type=click.Choice(Inference.input_types, case_sensitive=False),
     help="Type of input information",
     default="video",
 )
@@ -63,13 +95,14 @@ def train():
 @click.option(
     "--show/--no-show", default=True, help="Show preview in a cv window"
 )
-def inference(model, input_type, input_file, output_file, show):
+def inference(model, model_file, input_type, input_file, output_file, show):
     """Load pre-trained network and produce a result.
 
     MODEL is a model of pre-trainged network.
     """
     try:
-        inference = InferenceCreator(model).create_inference()
+        model = get_model_by_name(model)
+        inference = Inference(model, model_file)
         inference.run(input_type, input_file, output_file, show)
     except Exception as e:
         logging.error(e, exc_info=True)

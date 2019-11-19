@@ -5,6 +5,8 @@ import zipfile
 
 from pathlib import Path
 
+from ussegmentation.datasets import get_dataset_list
+
 
 class Downloader:
     """Class to download all needed data."""
@@ -12,10 +14,7 @@ class Downloader:
     def __init__(self, arg):
         self.log = logging.getLogger(__name__)
         self.arg = arg
-        self.datasets = {
-            "copter": "https://165616.selcdn.ru/datasets/copter.zip",
-            "cityscapes": "https://165616.selcdn.ru/datasets/cityscapes.zip",
-        }
+        self.datasets = get_dataset_list()
 
     def download(self):
         """Main download function."""
@@ -28,22 +27,22 @@ class Downloader:
         """Download all datasets."""
         self.log.info("Downloading datasets")
         # create datasets dir if not exists
-        main_dir = Path("datasets")
+        main_dir = Path("data", "datasets")
         if not main_dir.exists():
-            main_dir.mkdir()
+            main_dir.mkdir(parents=True)
 
         # for each dataset
-        for dataset, url in self.datasets.items():
-            dataset_dir = main_dir.joinpath(dataset)
+        for dataset in self.datasets:
+            dataset_dir = main_dir.joinpath(dataset.name)
             if dataset_dir.exists():
                 continue
 
-            self.log.info("Downloading '%s' dataset", dataset)
+            self.log.info("Downloading '%s' dataset", dataset.name)
             dataset_dir.mkdir()
 
-            dataset_archive = dataset_dir.joinpath(url.split("/")[-1])
+            dataset_archive = dataset_dir.joinpath(dataset.url.split("/")[-1])
 
-            with requests.get(url, stream=True) as r:
+            with requests.get(dataset.url, stream=True) as r:
                 r.raise_for_status()
                 with open(dataset_archive, "wb") as f:
                     for chunk in r.iter_content(chunk_size=8192):

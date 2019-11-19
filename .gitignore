@@ -1,6 +1,5 @@
 # Project-related directories
-datasets/
-models/
+data/
 .vscode/
 
 
