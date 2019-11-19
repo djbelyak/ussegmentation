@@ -2,7 +2,10 @@
 import logging
 import time
 
+import torch
 import cv2
+
+from pathlib import Path
 
 measurements = []
 
@@ -36,11 +39,14 @@ class SourceVideo:
 
     def __init__(self, file_name):
         self.file_name = file_name
+        self.log = logging.getLogger(__name__)
 
     def __enter__(self):
         if self.file_name == "":
             self.stream = cv2.VideoCapture(0)
         else:
+            if not Path(self.file_name).exists():
+                self.log.error("File %s is not exist", self.file_name)
             self.stream = cv2.VideoCapture(self.file_name)
         return self.stream
 
@@ -103,12 +109,15 @@ class Previewer:
 
 
 class Inference:
-    """Base class for inference."""
+    """Class for inference."""
 
     input_types = ["video", "image"]
 
-    def __init__(self):
+    def __init__(self, model, model_file=""):
         self.log = logging.getLogger(__name__)
+        self.model = model
+        self.load_cpu_model(model_file)
+        self.log.info("Run an inference")
 
     def run(self, input_type, input_file, output_file, show):
         """Performs inference on specified data."""
@@ -141,34 +150,35 @@ class Inference:
         previewer.show(output_frame)
         cv2.waitKey(0)
 
+    def to_torch(input_numpy):
+        """Convert numpy array to expected torch"""
+        input_torch = torch.from_numpy(input_numpy).float()
+        input_torch = input_torch.unsqueeze(0)
+        input_torch = torch.transpose(input_torch, 2, 3)
+        input_torch = torch.transpose(input_torch, 1, 2)
+        return input_torch
+
+    def to_numpy(output_torch):
+        output_torch = torch.transpose(output_torch, 1, 2)
+        output_torch = torch.transpose(output_torch, 2, 3)
+        output_torch = output_torch.squeeze(0)
+
+        output_numpy = output_torch.detach().numpy()
+        return output_numpy
+
+    def load_cpu_model(self, state_file=""):
+        """Load saved on empty model to CPU device."""
+        device = torch.device("cpu")
+        if state_file != "":
+            self.model.load_state_dict(
+                torch.load(state_file, map_location=device)
+            )
+        self.model.eval()
+        self.log.debug(self.model)
+
     @execution_time
-    def inference(self, input):
-        """Produce an inference on input data and return result."""
-        raise NotImplementedError
+    def inference(self, input_value):
+        """Run the simple network."""
+        result = self.model(Inference.to_torch(input_value))
+        return Inference.to_numpy(result)
 
-
-class EmptyInference(Inference):
-    """Simple empty inference to check."""
-
-    def __init__(self):
-        self.log = logging.getLogger(__name__)
-        self.log.info("Run an empty inference")
-
-    @execution_time
-    def inference(self, input):
-        """Simple HSV conversation to check inference."""
-        return cv2.cvtColor(input, cv2.COLOR_BGR2HSV)
-
-
-class InferenceCreator:
-    """Class to create selected inference object."""
-
-    inferences = {"empty": EmptyInference}
-    input_types = Inference.input_types
-
-    def __init__(self, inference_type):
-        self.type = inference_type
-
-    def create_inference(self):
-        """Factory methon for inference."""
-        return self.inferences[self.type]()
