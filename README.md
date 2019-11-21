@@ -29,7 +29,7 @@ ussegmentation get models
 To run empty inference on a video with preview:
 
 ```sh
-ussegmentation inference empty --input-file 'data\datasets\copter\video.mp4' --output-file 'data\datasets\copter\empty_inference.mp4'
+ussegmentation inference empty --model-file 'data\models\empty_copter.pth' --input-file 'data\datasets\copter\video.mp4' --output-file 'data\datasets\copter\empty_inference.mp4'
 ```
 
 To run empty inference on an image without preview:
@@ -44,10 +44,16 @@ To obtain needed datasets execute:
 ussegmentation get datasets
 ```
 
-To run training:
+To run training on copter dataset:
 
 ```sh
 ussegmentation train empty --dataset copter --model-file 'data\models\empty_copter.pth'
+```
+
+To run training on cityscapes dataset:
+
+```sh
+ussegmentation train empty --dataset cityscapes --model-file 'data\models\empty_cityscapes.pth'
 ```
 
 ## Acknowledgments

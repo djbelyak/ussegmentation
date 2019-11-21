@@ -50,12 +50,13 @@ def get(arg):
     type=click.Choice(
         [dataset.name for dataset in get_dataset_list()], case_sensitive=False
     ),
+    required=True,
 )
 @click.option(
     "--model-file",
     type=click.Path(),
     help="Path to result model file",
-    default="",
+    required=True,
 )
 def train(model, dataset, model_file):
     """Train a neuron network on specified dataset."""

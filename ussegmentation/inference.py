@@ -7,6 +7,8 @@ import cv2
 
 from pathlib import Path
 
+from ussegmentation.datasets.utils import remap_classes_to_colors
+
 measurements = []
 
 
@@ -48,7 +50,17 @@ class SourceVideo:
             if not Path(self.file_name).exists():
                 self.log.error("File %s is not exist", self.file_name)
             self.stream = cv2.VideoCapture(self.file_name)
-        return self.stream
+        return self
+
+    def read(self):
+        next_frame_exist, input_frame = self.stream.read()
+        return next_frame_exist, input_frame
+
+    def is_opened(self):
+        return self.stream.isOpened()
+
+    def get(self, item):
+        return self.stream.get(item)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.stream.release()
@@ -132,7 +144,7 @@ class Inference:
             with DestinationVideo(output_file, source) as destination:
                 next_frame_exist, input_frame = source.read()
                 while (
-                    source.isOpened()
+                    source.is_opened()
                     and next_frame_exist
                     and previewer.is_work()
                 ):
@@ -152,6 +164,7 @@ class Inference:
 
     def to_torch(input_numpy):
         """Convert numpy array to expected torch"""
+        input_numpy = cv2.cvtColor(input_numpy, cv2.COLOR_BGR2RGB)
         input_torch = torch.from_numpy(input_numpy).float()
         input_torch = input_torch.unsqueeze(0)
         input_torch = torch.transpose(input_torch, 2, 3)
@@ -159,11 +172,12 @@ class Inference:
         return input_torch
 
     def to_numpy(output_torch):
+        output_torch = torch.transpose(output_torch, 0, 1)
         output_torch = torch.transpose(output_torch, 1, 2)
-        output_torch = torch.transpose(output_torch, 2, 3)
-        output_torch = output_torch.squeeze(0)
 
         output_numpy = output_torch.detach().numpy()
+        output_numpy = remap_classes_to_colors(output_numpy)
+        output_numpy = cv2.cvtColor(output_numpy, cv2.COLOR_RGB2BGR)
         return output_numpy
 
     def load_cpu_model(self, state_file=""):
@@ -179,6 +193,6 @@ class Inference:
     @execution_time
     def inference(self, input_value):
         """Run the simple network."""
-        result = self.model(Inference.to_torch(input_value))
-        return Inference.to_numpy(result)
-
+        output = self.model(Inference.to_torch(input_value))
+        _, class_id = torch.max(output, 1)
+        return Inference.to_numpy(class_id)
