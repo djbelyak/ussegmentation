@@ -58,11 +58,17 @@ def get(arg):
     help="Path to result model file",
     required=True,
 )
-def train(model, dataset, model_file):
+@click.option(
+    "--epoch",
+    type=click.INT,
+    help="Number of epochs for training",
+    default=1,
+)
+def train(model, dataset, model_file, epoch):
     """Train a neuron network on specified dataset."""
     try:
         trainer = Trainer(model, dataset, model_file)
-        trainer.train()
+        trainer.train(epoch)
     except Exception as e:
         logging.error(e, exc_info=True)
 

@@ -11,16 +11,6 @@ from ussegmentation.datasets import get_dataset_by_name
 from torchvision import transforms
 
 
-def dice(pred, target):
-    smooth = 1.0
-    num = pred.size(0)
-    m1 = pred.view(num, -1).float()  # Flatten
-    m2 = target.view(num, -1).float()  # Flatten
-    intersection = (m1 * m2).sum().float()
-
-    return (2.0 * intersection + smooth) / (m1.sum() + m2.sum() + smooth)
-
-
 class Trainer:
     """Class to perform a training of neuron network."""
 
@@ -65,69 +55,23 @@ class Trainer:
         self.scheduler = optim.lr_scheduler.StepLR(
             self.optimizer, step_size=7, gamma=0.1
         )
-        self.num_epochs = 5
         self.device = torch.device(
-            "cpu"
-        )  # torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+            "cuda:0" if torch.cuda.is_available() else "cpu"
+        )
 
-    def train(self):
+    def train(self, num_epochs):
         """Perform the training."""
         self.log.info("Start the training")
 
         since = time.time()
 
-        best_model_wts = copy.deepcopy(self.model.state_dict())
-        best_loss = 10000.0
+        self.best_model_wts = copy.deepcopy(self.model.state_dict())
+        self.best_loss = float("inf")
+        self.best_acc = 0.0
 
-        for epoch in range(self.num_epochs):
-            self.log.info("Epoch %d/%d", (epoch + 1), self.num_epochs)
-
-            # Each epoch has a training and validation phase
-            for phase in ["train", "val"]:
-                if phase == "train":
-                    self.model.train()  # Set model to training mode
-                else:
-                    self.model.eval()  # Set model to evaluate mode
-
-                running_loss = 0.0
-
-                # Iterate over data.
-                for images, segments in self.dataloaders[phase]:
-                    images = images.to(self.device)
-                    segments = segments.to(self.device).long()
-
-                    # zero the parameter gradients
-                    self.optimizer.zero_grad()
-
-                    # forward
-                    # track history if only in train
-                    with torch.set_grad_enabled(phase == "train"):
-                        outputs = self.model(images)
-
-                        max_values, max_indices = torch.max(segments, 1)
-
-                        loss = self.criterion(outputs, max_indices)
-
-                        # backward + optimize only if in training phase
-                        if phase == "train":
-                            loss.backward()
-                            self.optimizer.step()
-
-                    # statistics
-                    running_loss += loss.item() * images.size(0)
-
-                if phase == "train":
-                    self.scheduler.step()
-
-                epoch_loss = running_loss / self.dataset_sizes[phase]
-
-                self.log.info("{} Loss: {:.4f}".format(phase, epoch_loss))
-
-                # deep copy the model
-                if phase == "val" and epoch_loss < best_loss:
-                    best_loss = epoch_loss
-                    best_model_wts = copy.deepcopy(self.model.state_dict())
-                    torch.save(self.model.state_dict(), self.model_file)
+        for epoch in range(num_epochs):
+            self.log.info("Epoch %d/%d", (epoch + 1), num_epochs)
+            self.train_one_epoch()
 
         time_elapsed = time.time() - since
         self.log.info(
@@ -135,9 +79,68 @@ class Trainer:
                 time_elapsed // 60, time_elapsed % 60
             )
         )
-        self.log.info("Best val Loss: {:4f}".format(best_loss))
+        self.log.info("Best val Loss: {:4f}".format(self.best_loss))
 
         # save best model weights
-        self.model.load_state_dict(best_model_wts)
+        self.model.load_state_dict(self.best_model_wts)
         torch.save(self.model.state_dict(), self.model_file)
         self.log.info("Well done")
+
+    def train_one_epoch(self):
+        # Each epoch has a training and validation phase
+        for phase in ["train", "val"]:
+            if phase == "train":
+                self.model.train()  # Set model to training mode
+            else:
+                self.model.eval()  # Set model to evaluate mode
+
+            running_loss = 0.0
+            running_corrects = 0
+
+            # Iterate over data.
+            for images, segments in self.dataloaders[phase]:
+                images = images.to(self.device)
+                segments = segments.to(self.device).long()
+
+                # zero the parameter gradients
+                self.optimizer.zero_grad()
+
+                # forward
+                # track history if only in train
+                with torch.set_grad_enabled(phase == "train"):
+                    outputs = self.model(images)
+
+                    max_values, max_indices = torch.max(segments, 1)
+
+                    loss = self.criterion(outputs, max_indices)
+
+                    # backward + optimize only if in training phase
+                    if phase == "train":
+                        loss.backward()
+                        self.optimizer.step()
+
+                # statistics
+                running_loss += loss.item() * images.size(0)
+                _, class_id = torch.max(outputs, 1)
+                running_corrects += torch.sum(class_id == segments) / (
+                    class_id.size(0) * class_id.size(1) * class_id.size(2)
+                )
+
+            if phase == "train":
+                self.scheduler.step()
+
+            epoch_loss = running_loss / self.dataset_sizes[phase]
+            epoch_acc = running_corrects.double() / self.dataset_sizes[phase]
+
+            self.log.info(
+                "{} Loss: {:.4f} Accuracy: {:.4f}".format(
+                    phase, epoch_loss, epoch_acc
+                )
+            )
+
+            # deep copy the model
+            if phase == "val" and epoch_loss < self.best_loss:
+                self.best_loss = epoch_loss
+                self.best_model_wts = copy.deepcopy(self.model.state_dict())
+                torch.save(self.model.state_dict(), self.model_file)
+
