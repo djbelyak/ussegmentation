@@ -1,8 +1,9 @@
 from ussegmentation.models.empty import EmptyNet
+from ussegmentation.models.enet import ENet
 
 
 def get_model_list():
-    return [EmptyNet]
+    return [EmptyNet, ENet]
 
 
 def get_model_by_name(model_name):

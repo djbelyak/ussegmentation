@@ -14,7 +14,9 @@ Then, execute the next commands in your Git Bash:
 ```sh
 git clone https://github.com/djbelyak/ussegmentation.git
 cd ussegmentation
-pip install -r requirements.txt -f https://download.pytorch.org/whl/torch_stable.html
+pip install -r requirements_cpu.txt
+# or if CUDA available
+pip install -r requirements_gpu.txt
 pip install -e .
 ```
 

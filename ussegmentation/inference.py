@@ -138,6 +138,11 @@ class Inference:
         if input_type == "image":
             self._process_image(input_file, output_file, show)
 
+    def _blend(self, input, output):
+        alpha = 0.5
+        beta = 1.0 - alpha
+        return cv2.addWeighted(input, alpha, output, beta, 0.0)
+
     def _process_video(self, input_file, output_file, show):
         previewer = Previewer(show)
         with SourceVideo(input_file) as source:
@@ -149,6 +154,7 @@ class Inference:
                     and previewer.is_work()
                 ):
                     output_frame = self.inference(input_frame)
+                    output_frame = self._blend(input_frame, output_frame)
                     destination.write(output_frame)
                     previewer.show(output_frame)
                     next_frame_exist, input_frame = source.read()
@@ -157,6 +163,7 @@ class Inference:
         previewer = Previewer(show)
         input_frame = cv2.imread(input_file)
         output_frame = self.inference(input_frame)
+        output_frame = self._blend(input_frame, output_frame)
         if output_file != "":
             cv2.imwrite(output_file, output_frame)
         previewer.show(output_frame)
@@ -188,7 +195,6 @@ class Inference:
                 torch.load(state_file, map_location=device)
             )
         self.model.eval()
-        self.log.debug(self.model)
 
     @execution_time
     def inference(self, input_value):
