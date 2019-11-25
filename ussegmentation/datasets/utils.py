@@ -28,4 +28,3 @@ def remap_color_to_classes(src_image, src_color, dst_image, dest_class):
     )
     dst_image[:, :, 0][mask] = dest_class
     return dst_image
-
