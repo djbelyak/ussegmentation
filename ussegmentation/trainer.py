@@ -44,10 +44,10 @@ class Trainer:
         )
         self.dataloaders = {
             "train": torch.utils.data.DataLoader(
-                train, batch_size=10, shuffle=True, num_workers=4
+                train, batch_size=1, shuffle=True, num_workers=1
             ),
             "val": torch.utils.data.DataLoader(
-                val, batch_size=10, shuffle=True, num_workers=4
+                val, batch_size=1, shuffle=True, num_workers=1
             ),
         }
         self.criterion = nn.CrossEntropyLoss()
@@ -62,6 +62,7 @@ class Trainer:
     def train(self, num_epochs):
         """Perform the training."""
         self.log.info("Start the training")
+        self.model.to(self.device)
 
         since = time.time()
 
@@ -100,7 +101,7 @@ class Trainer:
             # Iterate over data.
             for images, segments in self.dataloaders[phase]:
                 images = images.to(self.device)
-                segments = segments.to(self.device).long()
+                segments = segments.long().to(self.device)
 
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
