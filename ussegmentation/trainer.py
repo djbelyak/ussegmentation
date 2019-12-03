@@ -44,16 +44,16 @@ class Trainer:
         )
         self.dataloaders = {
             "train": torch.utils.data.DataLoader(
-                train, batch_size=1, shuffle=True, num_workers=1
+                train, batch_size=1, shuffle=True, num_workers=4
             ),
             "val": torch.utils.data.DataLoader(
-                val, batch_size=1, shuffle=True, num_workers=1
+                val, batch_size=1, shuffle=True, num_workers=4
             ),
         }
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=5e-4, weight_decay=2e-4)
         self.scheduler = optim.lr_scheduler.StepLR(
-            self.optimizer, step_size=7, gamma=0.1
+            self.optimizer, step_size=50, gamma=0.1
         )
         self.device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -97,6 +97,8 @@ class Trainer:
 
             running_loss = 0.0
             running_corrects = 0
+
+            torch.save(self.model.state_dict(), self.model_file)
 
             # Iterate over data.
             for images, segments in self.dataloaders[phase]:
