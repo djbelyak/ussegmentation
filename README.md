@@ -7,7 +7,7 @@
 First of all, make sure you have all pre requirements:
 
 - Git
-- Python
+- Python 3.7
 
 Then, execute the next commands in your Git Bash:
 
@@ -28,16 +28,22 @@ Before usage you need to obtain pre-trained models:
 ussegmentation get models
 ```
 
-To run empty inference on a video with preview:
+To run enet inference on a video from webcam:
 
 ```sh
-ussegmentation inference empty --model-file 'data\models\empty_copter.pth' --input-file 'data\datasets\copter\video.mp4' --output-file 'data\datasets\copter\empty_inference.mp4'
+ussegmentation inference enet --model-file 'data\models\enet_cityscapes.pth'
 ```
 
-To run empty inference on an image without preview:
+To run enet inference on a video with preview:
 
 ```sh
-ussegmentation inference empty --input-type image --input-file 'data\datasets\2019\frame_200.png' --output-file 'data\datasets\1.png' --no-show
+ussegmentation inference enet --model-file 'data\models\enet_cityscapes.pth' --input-file 'data\datasets\copter\video.mp4' --output-file 'data\datasets\copter\empty_inference.mp4'
+```
+
+To run enet inference on an image without preview:
+
+```sh
+ussegmentation inference enet --model-file 'data\models\enet_cityscapes.pth' --input-type image --input-file 'data\datasets\2019\frame_200.png' --output-file 'data\datasets\1.png' --no-show
 ```
 
 To obtain needed datasets execute:
@@ -49,15 +55,21 @@ ussegmentation get datasets
 To run training on copter dataset:
 
 ```sh
-ussegmentation train empty --dataset copter --model-file 'data\models\empty_copter.pth'
+ussegmentation train enet --dataset copter --model-file 'data\models\enet_copter.pth'
 ```
 
 To run training on cityscapes dataset:
 
 ```sh
-ussegmentation train empty --dataset cityscapes --model-file 'data\models\empty_cityscapes.pth'
+ussegmentation train enet --dataset cityscapes --model-file 'data\models\enet_cityscapes.pth'
 ```
 
 ## Acknowledgments
 
-The research was supported by the Russian Foundation for Basic Research (Grant No. 18-47-400003)
+Dataset provided by [Cityscapes Dataset](https://www.cityscapes-dataset.com/).
+
+Enet architecture was proposed by [Adam Paszke and others](https://arxiv.org/abs/1606.02147).
+
+Pytorch layout was developed by [David Silva](https://github.com/davidtvs/PyTorch-ENet).
+
+The research was supported by the Russian Foundation for Basic Research (Grant No. 18-47-400003).

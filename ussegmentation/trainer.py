@@ -113,9 +113,7 @@ class Trainer:
                 with torch.set_grad_enabled(phase == "train"):
                     outputs = self.model(images)
 
-                    max_values, max_indices = torch.max(segments, 1)
-
-                    loss = self.criterion(outputs, max_indices)
+                    loss = self.criterion(outputs, segments[:, 0, :, :])
 
                     # backward + optimize only if in training phase
                     if phase == "train":
@@ -146,4 +144,3 @@ class Trainer:
                 self.best_loss = epoch_loss
                 self.best_model_wts = copy.deepcopy(self.model.state_dict())
                 torch.save(self.model.state_dict(), self.model_file)
-

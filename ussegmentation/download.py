@@ -15,6 +15,7 @@ class Downloader:
         self.log = logging.getLogger(__name__)
         self.arg = arg
         self.datasets = get_dataset_list()
+        self.models_url = "https://165616.selcdn.ru/datasets/models.zip"
 
     def download(self):
         """Main download function."""
@@ -59,3 +60,23 @@ class Downloader:
     def download_models(self):
         """Download all models."""
         self.log.info("Downloading models")
+        # create datasets dir if not exists
+        main_dir = Path("data", "models")
+        if not main_dir.exists():
+            main_dir.mkdir(parents=True)
+
+        models_archive = main_dir.joinpath(self.models_url.split("/")[-1])
+
+        with requests.get(self.models_url, stream=True) as r:
+            r.raise_for_status()
+            with open(models_archive, "wb") as f:
+                for chunk in r.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+
+        with zipfile.ZipFile(models_archive, "r") as zip_ref:
+            zip_ref.extractall(main_dir)
+
+        models_archive.unlink()
+
+        self.log.info("Done!")
