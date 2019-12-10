@@ -44,16 +44,16 @@ class Trainer:
         )
         self.dataloaders = {
             "train": torch.utils.data.DataLoader(
-                train, batch_size=10, shuffle=True, num_workers=4
+                train, batch_size=1, shuffle=True, num_workers=4
             ),
             "val": torch.utils.data.DataLoader(
-                val, batch_size=10, shuffle=True, num_workers=4
+                val, batch_size=1, shuffle=True, num_workers=4
             ),
         }
         self.criterion = nn.CrossEntropyLoss()
-        self.optimizer = optim.Adam(self.model.parameters(), lr=0.0005)
+        self.optimizer = optim.Adam(self.model.parameters(), lr=5e-4, weight_decay=2e-4)
         self.scheduler = optim.lr_scheduler.StepLR(
-            self.optimizer, step_size=7, gamma=0.1
+            self.optimizer, step_size=50, gamma=0.1
         )
         self.device = torch.device(
             "cuda:0" if torch.cuda.is_available() else "cpu"
@@ -62,6 +62,7 @@ class Trainer:
     def train(self, num_epochs):
         """Perform the training."""
         self.log.info("Start the training")
+        self.model.to(self.device)
 
         since = time.time()
 
@@ -97,10 +98,12 @@ class Trainer:
             running_loss = 0.0
             running_corrects = 0
 
+            torch.save(self.model.state_dict(), self.model_file)
+
             # Iterate over data.
             for images, segments in self.dataloaders[phase]:
                 images = images.to(self.device)
-                segments = segments.to(self.device).long()
+                segments = segments.long().to(self.device)
 
                 # zero the parameter gradients
                 self.optimizer.zero_grad()
@@ -110,9 +113,7 @@ class Trainer:
                 with torch.set_grad_enabled(phase == "train"):
                     outputs = self.model(images)
 
-                    max_values, max_indices = torch.max(segments, 1)
-
-                    loss = self.criterion(outputs, max_indices)
+                    loss = self.criterion(outputs, segments[:, 0, :, :])
 
                     # backward + optimize only if in training phase
                     if phase == "train":
@@ -143,4 +144,3 @@ class Trainer:
                 self.best_loss = epoch_loss
                 self.best_model_wts = copy.deepcopy(self.model.state_dict())
                 torch.save(self.model.state_dict(), self.model_file)
-
